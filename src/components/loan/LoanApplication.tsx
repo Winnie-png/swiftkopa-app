@@ -192,10 +192,10 @@ export function LoanApplication() {
         <AnimatePresence mode="wait">
           {step === 'type' && (
             <LoanTypeStep
-              key="type"
-              selectedType={formData.loanType}
-              onSelect={handleLoanTypeSelect}
-              onNext={goNext}
+  key="type"
+  selectedType={formData.loanType}
+  onSelect={handleLoanTypeSelect}
+  onNext={() => {}}
             />
           )}
 
