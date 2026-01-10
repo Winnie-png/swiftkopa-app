@@ -39,8 +39,9 @@ export function LoanAmountStep({
 }: LoanAmountStepProps) {
   // For secured loans, use ONLY the LTV-calculated max (no hardcoded cap)
   // For unsecured loans, use the default max
-  const effectiveMaxAmount = loanType === 'secured' && maxLoanAmount 
-    ? maxLoanAmount 
+  const effectiveMaxAmount =
+  loanType === 'secured' && typeof maxLoanAmount === 'number'
+    ? maxLoanAmount
     : DEFAULT_MAX_AMOUNT_UNSECURED;
   
   const [localAmount, setLocalAmount] = useState(
