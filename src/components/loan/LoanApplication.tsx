@@ -92,7 +92,7 @@ export function LoanApplication() {
     const handleSubmit = async () => {
   try {
     // Send loan data to Google Sheets via Apps Script Web App
-    await fetch("YOUR_WEB_APP_URL", {
+    await fetch("https://script.google.com/macros/s/AKfycbymR7p8ZcQqSvljH2j7q6HXz7sq1_iany7ds5wdeAMuXtmzE8tZM9phBZl_PqlzsVOE/exec", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
