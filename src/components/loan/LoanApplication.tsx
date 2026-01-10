@@ -91,7 +91,7 @@ export function LoanApplication() {
   const handleSubmit = async () => {
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbymR7p8ZcQqSvljH2j7q6HXz7sq1_iany7ds5wdeAMuXtmzE8tZM9phBZl_PqlzsVOE/exec",
+        "https://script.google.com/macros/s/AKfycbw3wHKN9FlXHlISrG20IbdEzsyKimB7WSrfnI5-6YPFZj9jCkwAiHX0NuPQMJYymp74/exec",
         {
           method: "POST",
           mode: "cors",
