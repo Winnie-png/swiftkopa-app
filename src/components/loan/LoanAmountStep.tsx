@@ -22,7 +22,7 @@ interface LoanAmountStepProps {
 }
 
 const MIN_AMOUNT = 1000;
-const DEFAULT_MAX_AMOUNT = 500000;
+const DEFAULT_MAX_AMOUNT_UNSECURED = 500000;
 const MIN_TERM = 1;
 const MAX_TERM = 12;
 
@@ -37,10 +37,11 @@ export function LoanAmountStep({
   onNext,
   onBack,
 }: LoanAmountStepProps) {
-  // For secured loans, use the LTV-capped max; for unsecured, use default max
+  // For secured loans, use ONLY the LTV-calculated max (no hardcoded cap)
+  // For unsecured loans, use the default max
   const effectiveMaxAmount = loanType === 'secured' && maxLoanAmount 
-    ? Math.min(maxLoanAmount, DEFAULT_MAX_AMOUNT) 
-    : DEFAULT_MAX_AMOUNT;
+    ? maxLoanAmount 
+    : DEFAULT_MAX_AMOUNT_UNSECURED;
   
   const [localAmount, setLocalAmount] = useState(
     Math.min(amount || 10000, effectiveMaxAmount)
