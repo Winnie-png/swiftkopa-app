@@ -38,8 +38,15 @@ export function LoanApplication() {
   const [formData, setFormData] = useState(initialState);
 
   const handleLoanTypeSelect = (type: LoanType) => {
-    setFormData(prev => ({ ...prev, loanType: type }));
-  };
+  setFormData(prev => ({ ...prev, loanType: type }));
+
+  // FORCE correct next step immediately
+  if (type === 'secured') {
+    setStep('collateral');
+  } else {
+    setStep('amount');
+  }
+};
 
   const handleAmountChange = (amount: number) => {
     setFormData(prev => ({ ...prev, amount }));
