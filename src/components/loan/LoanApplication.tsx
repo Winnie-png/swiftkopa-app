@@ -88,23 +88,21 @@ export function LoanApplication() {
     return undefined;
   };
 
-  const handleSubmit = async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // In production, this would:
-    // 1. Send data to Google Sheets via Apps Script Web App
-    // 2. Upload documents to Google Drive
-    // 3. Send email notification to admin
-    
-    console.log('Loan Application Submitted:', {
-      loanType: formData.loanType,
-      amount: formData.amount,
-      termMonths: formData.termMonths,
-      calculation: formData.calculation,
-      mpesaNumber: formData.mpesaNumber,
-      fullName: formData.fullName,
-      documentsCount: formData.documents.length,
+    const handleSubmit = async () => {
+  try {
+    // Send loan data to Google Sheets via Apps Script Web App
+    await fetch("YOUR_WEB_APP_URL", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullName: formData.fullName,
+        loanType: formData.loanType,
+        amount: formData.amount,
+        termMonths: formData.termMonths,
+        mpesaNumber: formData.mpesaNumber,
+        documents: formData.documents.map(doc => doc.name),
+      }),
     });
 
     toast({
@@ -113,7 +111,15 @@ export function LoanApplication() {
     });
 
     setStep('success');
-  };
+  } catch (error) {
+    console.error("Error submitting application:", error);
+    toast({
+      title: "Submission Failed",
+      description: "There was an error sending your application. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
 
   const handleNewApplication = () => {
     // Clean up document previews
