@@ -88,38 +88,36 @@ export function LoanApplication() {
     return undefined;
   };
 
-    
-    const handleSubmit = async () => {
-  try {
-    // Send loan data to Google Sheets via Apps Script Web App
-    await fetch("https://script.google.com/macros/s/AKfycbymR7p8ZcQqSvljH2j7q6HXz7sq1_iany7ds5wdeAMuXtmzE8tZM9phBZl_PqlzsVOE/exec", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fullName: formData.fullName,
-        loanType: formData.loanType,
-        amount: formData.amount,
-        termMonths: formData.termMonths,
-        mpesaNumber: formData.mpesaNumber,
-        documents: formData.documents.map(doc => doc.name),
-      }),
-    });
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbymR7p8ZcQqSvljH2j7q6HXz7sq1_iany7ds5wdeAMuXtmzE8tZM9phBZl_PqlzsVOE/exec",
+        {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName: formData.fullName,
+            loanType: formData.loanType,
+            amount: formData.amount,
+            termMonths: formData.termMonths,
+            mpesaNumber: formData.mpesaNumber,
+            documents: formData.documents?.map(doc => doc.name) || [],
+          }),
+        }
+      );
 
-    toast({
-      title: "Application Submitted",
-      description: "Your loan application has been received successfully.",
-    });
+      if (!response.ok) throw new Error("Submission failed");
 
-    setStep('success');
-  } catch (error) {
-    console.error("Error submitting application:", error);
-    toast({
-      title: "Submission Failed",
-      description: "There was an error sending your application. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
+      setStep("success");
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: "There was an error sending your application.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleNewApplication = () => {
     // Clean up document previews
