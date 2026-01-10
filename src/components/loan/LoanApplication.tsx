@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ProgressBar } from './ProgressBar';
 import { LoanTypeStep } from './LoanTypeStep';
+import { CollateralStep, LTV_LIMITS } from './CollateralStep';
 import { LoanAmountStep } from './LoanAmountStep';
 import { DocumentUploadStep } from './DocumentUploadStep';
 import { MpesaStep } from './MpesaStep';
@@ -12,7 +13,9 @@ import {
   LoanCalculation, 
   DocumentFile, 
   LoanApplication as LoanAppType,
-  FormStep 
+  FormStep,
+  CollateralType,
+  CollateralInfo,
 } from '@/types/loan';
 import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +28,8 @@ const initialState = {
   documents: [] as DocumentFile[],
   mpesaNumber: '',
   fullName: '',
+  collateralType: null as CollateralType | null,
+  assetValue: 0,
 };
 
 export function LoanApplication() {
@@ -58,6 +63,22 @@ export function LoanApplication() {
 
   const handleNameChange = (fullName: string) => {
     setFormData(prev => ({ ...prev, fullName }));
+  };
+
+  const handleCollateralTypeChange = (collateralType: CollateralType) => {
+    setFormData(prev => ({ ...prev, collateralType }));
+  };
+
+  const handleAssetValueChange = (assetValue: number) => {
+    setFormData(prev => ({ ...prev, assetValue }));
+  };
+
+  // Calculate max loan amount for secured loans
+  const getMaxLoanAmount = (): number | undefined => {
+    if (formData.loanType === 'secured' && formData.collateralType && formData.assetValue > 0) {
+      return Math.floor(formData.assetValue * LTV_LIMITS[formData.collateralType]);
+    }
+    return undefined;
   };
 
   const handleSubmit = async () => {
@@ -95,8 +116,15 @@ export function LoanApplication() {
     setStep('type');
   };
 
+  const getStepOrder = (): FormStep[] => {
+    if (formData.loanType === 'secured') {
+      return ['type', 'collateral', 'amount', 'documents', 'mpesa', 'review', 'success'];
+    }
+    return ['type', 'amount', 'documents', 'mpesa', 'review', 'success'];
+  };
+
   const goNext = () => {
-    const stepOrder: FormStep[] = ['type', 'amount', 'documents', 'mpesa', 'review', 'success'];
+    const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex < stepOrder.length - 1) {
       setStep(stepOrder[currentIndex + 1]);
@@ -104,12 +132,22 @@ export function LoanApplication() {
   };
 
   const goBack = () => {
-    const stepOrder: FormStep[] = ['type', 'amount', 'documents', 'mpesa', 'review', 'success'];
+    const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
     }
   };
+
+  // Build collateral info for secured loans
+  const collateralInfo: CollateralInfo | undefined = 
+    formData.loanType === 'secured' && formData.collateralType && formData.assetValue > 0
+      ? {
+          type: formData.collateralType,
+          assetValue: formData.assetValue,
+          maxLoanAmount: getMaxLoanAmount() || 0,
+        }
+      : undefined;
 
   // Build complete application object
   const application: LoanAppType = {
@@ -120,6 +158,7 @@ export function LoanApplication() {
     documents: formData.documents,
     mpesaNumber: formData.mpesaNumber,
     fullName: formData.fullName,
+    collateral: collateralInfo,
   };
 
   return (
@@ -138,7 +177,7 @@ export function LoanApplication() {
 
       {/* Progress */}
       <div className="container max-w-lg mx-auto px-4">
-        <ProgressBar currentStep={step} />
+        <ProgressBar currentStep={step} loanType={formData.loanType} />
       </div>
 
       {/* Content */}
@@ -153,11 +192,25 @@ export function LoanApplication() {
             />
           )}
 
+          {step === 'collateral' && formData.loanType === 'secured' && (
+            <CollateralStep
+              key="collateral"
+              collateralType={formData.collateralType}
+              assetValue={formData.assetValue}
+              onCollateralTypeChange={handleCollateralTypeChange}
+              onAssetValueChange={handleAssetValueChange}
+              onNext={goNext}
+              onBack={goBack}
+            />
+          )}
+
           {step === 'amount' && (
             <LoanAmountStep
               key="amount"
               amount={formData.amount}
               termMonths={formData.termMonths}
+              maxLoanAmount={getMaxLoanAmount()}
+              loanType={formData.loanType}
               onAmountChange={handleAmountChange}
               onTermChange={handleTermChange}
               onCalculationChange={handleCalculationChange}

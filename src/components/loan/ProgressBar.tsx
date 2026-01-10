@@ -1,20 +1,33 @@
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { FormStep } from '@/types/loan';
+import { FormStep, LoanType } from '@/types/loan';
 
 interface ProgressBarProps {
   currentStep: FormStep;
+  loanType: LoanType | null;
 }
 
-const steps: { key: FormStep; label: string }[] = [
-  { key: 'type', label: 'Type' },
-  { key: 'amount', label: 'Amount' },
-  { key: 'documents', label: 'Docs' },
-  { key: 'mpesa', label: 'M-Pesa' },
-  { key: 'review', label: 'Review' },
-];
+const getSteps = (loanType: LoanType | null): { key: FormStep; label: string }[] => {
+  const baseSteps: { key: FormStep; label: string }[] = [
+    { key: 'type', label: 'Type' },
+  ];
 
-export function ProgressBar({ currentStep }: ProgressBarProps) {
+  if (loanType === 'secured') {
+    baseSteps.push({ key: 'collateral', label: 'Asset' });
+  }
+
+  baseSteps.push(
+    { key: 'amount', label: 'Amount' },
+    { key: 'documents', label: 'Docs' },
+    { key: 'mpesa', label: 'M-Pesa' },
+    { key: 'review', label: 'Review' }
+  );
+
+  return baseSteps;
+};
+
+export function ProgressBar({ currentStep, loanType }: ProgressBarProps) {
+  const steps = getSteps(loanType);
   const currentIndex = steps.findIndex(s => s.key === currentStep);
   
   if (currentStep === 'success') {

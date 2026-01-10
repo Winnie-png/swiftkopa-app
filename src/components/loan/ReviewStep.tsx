@@ -9,19 +9,28 @@ import {
   Shield, 
   CheckCircle, 
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Car,
+  Wrench,
+  MapPin
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/loanCalculator';
-import { LoanApplication } from '@/types/loan';
+import { LoanApplication, CollateralType } from '@/types/loan';
 
 interface ReviewStepProps {
   application: LoanApplication;
   onSubmit: () => Promise<void>;
   onBack: () => void;
 }
+
+const collateralLabels: Record<CollateralType, { label: string; icon: typeof Car }> = {
+  vehicle: { label: 'Vehicle', icon: Car },
+  equipment: { label: 'Equipment', icon: Wrench },
+  land: { label: 'Land', icon: MapPin },
+};
 
 export function ReviewStep({ application, onSubmit, onBack }: ReviewStepProps) {
   const [agreed, setAgreed] = useState(false);
@@ -45,6 +54,17 @@ export function ReviewStep({ application, onSubmit, onBack }: ReviewStepProps) {
       value: application.loanType === 'secured' ? 'Secured Loan' : 'Unsecured Loan',
       color: 'text-primary',
     },
+    // Add collateral info for secured loans
+    ...(application.loanType === 'secured' && application.collateral ? [{
+      icon: collateralLabels[application.collateral.type].icon,
+      title: 'Collateral',
+      items: [
+        { label: 'Type', value: collateralLabels[application.collateral.type].label },
+        { label: 'Asset Value', value: formatCurrency(application.collateral.assetValue) },
+        { label: 'Max Loan (LTV)', value: formatCurrency(application.collateral.maxLoanAmount) },
+      ],
+      color: 'text-accent',
+    }] : []),
     {
       icon: Calculator,
       title: 'Loan Details',
