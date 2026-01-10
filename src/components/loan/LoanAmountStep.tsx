@@ -7,11 +7,13 @@ import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { calculateLoan, formatCurrency } from '@/lib/loanCalculator';
-import { LoanCalculation } from '@/types/loan';
+import { LoanCalculation, LoanType } from '@/types/loan';
 
 interface LoanAmountStepProps {
   amount: number;
   termMonths: number;
+  maxLoanAmount?: number;
+  loanType: LoanType | null;
   onAmountChange: (amount: number) => void;
   onTermChange: (term: number) => void;
   onCalculationChange: (calc: LoanCalculation) => void;
@@ -20,22 +22,39 @@ interface LoanAmountStepProps {
 }
 
 const MIN_AMOUNT = 1000;
-const MAX_AMOUNT = 500000;
+const DEFAULT_MAX_AMOUNT = 500000;
 const MIN_TERM = 1;
 const MAX_TERM = 12;
 
 export function LoanAmountStep({
   amount,
   termMonths,
+  maxLoanAmount,
+  loanType,
   onAmountChange,
   onTermChange,
   onCalculationChange,
   onNext,
   onBack,
 }: LoanAmountStepProps) {
-  const [localAmount, setLocalAmount] = useState(amount || 10000);
+  // For secured loans, use the LTV-capped max; for unsecured, use default max
+  const effectiveMaxAmount = loanType === 'secured' && maxLoanAmount 
+    ? Math.min(maxLoanAmount, DEFAULT_MAX_AMOUNT) 
+    : DEFAULT_MAX_AMOUNT;
+  
+  const [localAmount, setLocalAmount] = useState(
+    Math.min(amount || 10000, effectiveMaxAmount)
+  );
   const [localTerm, setLocalTerm] = useState(termMonths || 3);
   const [calculation, setCalculation] = useState<LoanCalculation | null>(null);
+
+  // Clamp amount to effective max when it changes
+  useEffect(() => {
+    if (localAmount > effectiveMaxAmount) {
+      setLocalAmount(effectiveMaxAmount);
+      onAmountChange(effectiveMaxAmount);
+    }
+  }, [effectiveMaxAmount]);
 
   useEffect(() => {
     const calc = calculateLoan(localAmount, localTerm);
@@ -45,14 +64,15 @@ export function LoanAmountStep({
 
   const handleAmountInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value.replace(/,/g, '')) || 0;
-    const clamped = Math.min(Math.max(value, 0), MAX_AMOUNT);
+    const clamped = Math.min(Math.max(value, 0), effectiveMaxAmount);
     setLocalAmount(clamped);
     onAmountChange(clamped);
   };
 
   const handleAmountSliderChange = (value: number[]) => {
-    setLocalAmount(value[0]);
-    onAmountChange(value[0]);
+    const clamped = Math.min(value[0], effectiveMaxAmount);
+    setLocalAmount(clamped);
+    onAmountChange(clamped);
   };
 
   const handleTermChange = (value: number[]) => {
@@ -60,7 +80,8 @@ export function LoanAmountStep({
     onTermChange(value[0]);
   };
 
-  const isValidAmount = localAmount >= MIN_AMOUNT && localAmount <= MAX_AMOUNT;
+  const isValidAmount = localAmount >= MIN_AMOUNT && localAmount <= effectiveMaxAmount;
+  const isSecuredLoan = loanType === 'secured' && maxLoanAmount !== undefined;
 
   return (
     <motion.div
@@ -73,6 +94,27 @@ export function LoanAmountStep({
         <h2 className="text-2xl font-bold text-foreground">Loan Details</h2>
         <p className="text-muted-foreground mt-1">Enter amount and choose repayment term</p>
       </div>
+
+      {/* LTV Limit Notice for Secured Loans */}
+      {isSecuredLoan && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-primary/10 border border-primary/20 rounded-xl"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Based on your selected collateral, the maximum loan you can get is:
+              </p>
+              <p className="text-xl font-bold text-primary mt-1">
+                {formatCurrency(effectiveMaxAmount)}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Amount Input */}
       <div className="space-y-4">
@@ -93,13 +135,13 @@ export function LoanAmountStep({
           value={[localAmount]}
           onValueChange={handleAmountSliderChange}
           min={MIN_AMOUNT}
-          max={MAX_AMOUNT}
+          max={effectiveMaxAmount}
           step={1000}
           className="mt-2"
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>{formatCurrency(MIN_AMOUNT)}</span>
-          <span>{formatCurrency(MAX_AMOUNT)}</span>
+          <span>{formatCurrency(effectiveMaxAmount)}</span>
         </div>
       </div>
 

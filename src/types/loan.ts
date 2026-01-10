@@ -1,5 +1,7 @@
 export type LoanType = 'secured' | 'unsecured';
 
+export type CollateralType = 'vehicle' | 'equipment' | 'land';
+
 export interface LoanCalculation {
   principal: number;
   interestRate: number;
@@ -18,6 +20,12 @@ export interface DocumentFile {
   name: string;
 }
 
+export interface CollateralInfo {
+  type: CollateralType;
+  assetValue: number;
+  maxLoanAmount: number;
+}
+
 export interface LoanApplication {
   loanType: LoanType;
   amount: number;
@@ -26,6 +34,7 @@ export interface LoanApplication {
   documents: DocumentFile[];
   mpesaNumber: string;
   fullName: string;
+  collateral?: CollateralInfo;
 }
 
-export type FormStep = 'type' | 'amount' | 'documents' | 'mpesa' | 'review' | 'success';
+export type FormStep = 'type' | 'collateral' | 'amount' | 'documents' | 'mpesa' | 'review' | 'success';
