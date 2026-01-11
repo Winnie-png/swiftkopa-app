@@ -93,8 +93,34 @@ export function LoanApplication() {
     return undefined;
   };
 
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data:...;base64, prefix to get raw base64
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleSubmit = async () => {
     try {
+      // Convert all documents to Base64
+      const filesPromises = formData.documents.map(async (doc) => {
+        const base64 = await convertFileToBase64(doc.file);
+        return {
+          base64,
+          fileName: doc.name,
+          mimeType: doc.file.type,
+        };
+      });
+
+      const files = await Promise.all(filesPromises);
+
       const response = await fetch(
         "https://script.google.com/macros/s/AKfycbw3wHKN9FlXHlISrG20IbdEzsyKimB7WSrfnI5-6YPFZj9jCkwAiHX0NuPQMJYymp74/exec",
         {
@@ -107,7 +133,7 @@ export function LoanApplication() {
             amount: formData.amount,
             termMonths: formData.termMonths,
             mpesaNumber: formData.mpesaNumber,
-            documents: formData.documents?.map(doc => doc.name) || [],
+            files,
           }),
         }
       );
