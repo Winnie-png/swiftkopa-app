@@ -94,8 +94,7 @@ export function LoanApplication() {
         "https://script.google.com/macros/s/AKfycbw3wHKN9FlXHlISrG20IbdEzsyKimB7WSrfnI5-6YPFZj9jCkwAiHX0NuPQMJYymp74/exec",
         {
           method: "POST",
-          mode: "cors",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             fullName: formData.fullName,
             loanType: formData.loanType,
