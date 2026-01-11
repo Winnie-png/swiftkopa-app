@@ -28,6 +28,7 @@ const initialState = {
   documents: [] as DocumentFile[],
   mpesaNumber: '',
   fullName: '',
+  email: '',
   collateralType: null as CollateralType | null,
   assetValue: 0,
 };
@@ -72,6 +73,10 @@ export function LoanApplication() {
     setFormData(prev => ({ ...prev, fullName }));
   };
 
+  const handleEmailChange = (email: string) => {
+    setFormData(prev => ({ ...prev, email }));
+  };
+
   const handleCollateralTypeChange = (collateralType: CollateralType) => {
     setFormData(prev => ({ ...prev, collateralType }));
   };
@@ -97,6 +102,7 @@ export function LoanApplication() {
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             fullName: formData.fullName,
+            email: formData.email,
             loanType: formData.loanType,
             amount: formData.amount,
             termMonths: formData.termMonths,
@@ -245,9 +251,11 @@ export function LoanApplication() {
               key="mpesa"
               mpesaNumber={formData.mpesaNumber}
               fullName={formData.fullName}
+              email={formData.email}
               calculation={formData.calculation}
               onMpesaChange={handleMpesaChange}
               onNameChange={handleNameChange}
+              onEmailChange={handleEmailChange}
               onNext={goNext}
               onBack={goBack}
             />
