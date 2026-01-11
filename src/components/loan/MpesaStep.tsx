@@ -45,6 +45,7 @@ export function MpesaStep({
   };
 
   const validateEmail = (email: string) => {
+    if (!email) return false;
     const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return pattern.test(email.trim());
   };
