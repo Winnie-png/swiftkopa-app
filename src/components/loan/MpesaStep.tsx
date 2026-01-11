@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { Phone, ArrowDownCircle, ArrowUpCircle, CheckCircle2 } from 'lucide-react';
+import { Phone, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
@@ -11,9 +11,11 @@ import { LoanCalculation } from '@/types/loan';
 interface MpesaStepProps {
   mpesaNumber: string;
   fullName: string;
+  email: string;
   calculation: LoanCalculation | null;
   onMpesaChange: (number: string) => void;
   onNameChange: (name: string) => void;
+  onEmailChange: (email: string) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -21,13 +23,15 @@ interface MpesaStepProps {
 export function MpesaStep({
   mpesaNumber,
   fullName,
+  email,
   calculation,
   onMpesaChange,
   onNameChange,
+  onEmailChange,
   onNext,
   onBack,
 }: MpesaStepProps) {
-  const [touched, setTouched] = useState({ phone: false, name: false });
+  const [touched, setTouched] = useState({ phone: false, name: false, email: false });
 
   const validatePhone = (phone: string) => {
     // Kenyan phone format: 07XXXXXXXX or 01XXXXXXXX or +254...
@@ -38,6 +42,11 @@ export function MpesaStep({
 
   const validateName = (name: string) => {
     return name.trim().length >= 3 && name.trim().split(' ').length >= 2;
+  };
+
+  const validateEmail = (email: string) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(email.trim());
   };
 
   const formatPhoneNumber = (value: string) => {
@@ -62,7 +71,8 @@ export function MpesaStep({
 
   const isPhoneValid = validatePhone(mpesaNumber);
   const isNameValid = validateName(fullName);
-  const canProceed = isPhoneValid && isNameValid;
+  const isEmailValid = validateEmail(email);
+  const canProceed = isPhoneValid && isNameValid && isEmailValid;
 
   return (
     <motion.div
@@ -106,6 +116,29 @@ export function MpesaStep({
             />
             {touched.name && !isNameValid && (
               <p className="text-xs text-destructive">Enter your full name (first and last name)</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <div className="relative">
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => onEmailChange(e.target.value)}
+                onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                className={`h-12 pl-12 ${
+                  touched.email && !isEmailValid 
+                    ? 'border-destructive focus-visible:ring-destructive' 
+                    : ''
+                }`}
+              />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            </div>
+            {touched.email && !isEmailValid && (
+              <p className="text-xs text-destructive">Enter a valid email address</p>
             )}
           </div>
 
