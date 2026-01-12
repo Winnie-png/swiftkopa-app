@@ -125,6 +125,7 @@ export function LoanApplication() {
         "https://script.google.com/macros/s/AKfycbw3wHKN9FlXHlISrG20IbdEzsyKimB7WSrfnI5-6YPFZj9jCkwAiHX0NuPQMJYymp74/exec",
         {
           method: "POST",
+          mode: "no-cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
             fullName: formData.fullName,
@@ -133,6 +134,8 @@ export function LoanApplication() {
             amount: formData.amount,
             termMonths: formData.termMonths,
             mpesaNumber: formData.mpesaNumber,
+            collateralType: formData.collateralType,
+            assetValue: formData.assetValue,
             files,
           }),
         }
