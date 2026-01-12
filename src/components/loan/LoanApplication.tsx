@@ -121,7 +121,9 @@ export function LoanApplication() {
 
       const files = await Promise.all(filesPromises);
 
-      const response = await fetch(
+      // With mode: 'no-cors', we get an opaque response (status 0)
+      // We assume success if the request doesn't throw a network error
+      await fetch(
         "https://script.google.com/macros/s/AKfycbw3wHKN9FlXHlISrG20IbdEzsyKimB7WSrfnI5-6YPFZj9jCkwAiHX0NuPQMJYymp74/exec",
         {
           method: "POST",
@@ -141,13 +143,12 @@ export function LoanApplication() {
         }
       );
 
-      if (!response.ok) throw new Error("Submission failed");
-
+      // If we get here without throwing, assume success
       setStep("success");
     } catch (error) {
       toast({
         title: "Submission Failed",
-        description: "There was an error sending your application.",
+        description: "There was a network error sending your application. Please try again.",
         variant: "destructive",
       });
     }
