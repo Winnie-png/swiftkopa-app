@@ -124,7 +124,7 @@ export function LoanApplication() {
       // With mode: 'no-cors', we get an opaque response (status 0)
       // We assume success if the request doesn't throw a network error
       await fetch(
-        "https://script.google.com/macros/s/AKfycbwl0_gXOq_RHY7ZT9a7zbbDr_oXeKlmXhWgXywehl8Wxa52f1T6hleWSR-yRJaMFURU/exec",
+        "https://script.google.com/macros/s/AKfycbxo-Dr4pesDY6kr2FhMfmAJxpWL7HkMF6xNuhzY18S82i6psRZ31xfIfo0j27XWVEuY/exec",
         {
           method: "POST",
           mode: "no-cors",
