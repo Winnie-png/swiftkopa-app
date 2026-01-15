@@ -214,9 +214,9 @@ export function LoanApplication() {
         <div className="container max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-center gap-2">
             <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">L</span>
+              <span className="text-primary-foreground font-bold text-sm">S</span>
             </div>
-            <span className="font-bold text-foreground">QuickLoan</span>
+            <span className="font-bold text-foreground">SwiftKopa</span>
           </div>
         </div>
       </header>
