@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { LoanApplicationData, ApplicationStatus } from '@/types/admin';
 import { toast } from '@/hooks/use-toast';
 
-const GET_URL = import.meta.env.VITE_APPS_SCRIPT_GET_URL;
-const UPDATE_URL = import.meta.env.VITE_APPS_SCRIPT_UPDATE_URL;
+const SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
 
 export const useLoanApplications = () => {
   const [applications, setApplications] = useState<LoanApplicationData[]>([]);
@@ -11,8 +10,8 @@ export const useLoanApplications = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchApplications = useCallback(async () => {
-    if (!GET_URL) {
-      setError('Apps Script GET URL not configured');
+    if (!SCRIPT_URL) {
+      setError('Apps Script URL not configured');
       setLoading(false);
       return;
     }
@@ -21,7 +20,7 @@ export const useLoanApplications = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(GET_URL);
+      const response = await fetch(SCRIPT_URL);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.status}`);
@@ -52,25 +51,25 @@ export const useLoanApplications = () => {
     status: ApplicationStatus,
     notes: string
   ): Promise<boolean> => {
-    if (!UPDATE_URL) {
+    if (!SCRIPT_URL) {
       toast({
         title: 'Error',
-        description: 'Apps Script UPDATE URL not configured',
+        description: 'Apps Script URL not configured',
         variant: 'destructive',
       });
       return false;
     }
 
     try {
-      const response = await fetch(UPDATE_URL, {
+      const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain',
         },
         body: JSON.stringify({
-          rowIndex,
+          action: 'updateStatus',
+          rowNumber: rowIndex,
           status,
-          notes,
         }),
       });
 
