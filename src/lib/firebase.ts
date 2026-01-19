@@ -16,12 +16,10 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Get admin emails from environment variable (comma-separated)
-const adminEmailsEnv = import.meta.env.VITE_ADMIN_EMAILS || '';
-export const ADMIN_EMAILS: string[] = adminEmailsEnv
-  .split(',')
-  .map((email: string) => email.trim().toLowerCase())
-  .filter((email: string) => email.length > 0);
+// Authorized admin emails
+export const ADMIN_EMAILS: string[] = [
+  'swiftkopa.app@gmail.com'
+];
 
 export const isAdminEmail = (email: string | null | undefined): boolean => {
   if (!email) return false;
