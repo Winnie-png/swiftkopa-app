@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { LoanApplicationData, ApplicationStatus } from '@/types/admin';
 import { toast } from '@/hooks/use-toast';
 
-const SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
+// Google Apps Script Web App URL for Admin Dashboard
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz63M9fBF-OSVr3kBReS23ygpLY9wa2lom9Ndrl_tJ9ynxapjCGH6gdfnkIk_hA6VB8/exec';
 
 export const useLoanApplications = () => {
   const [applications, setApplications] = useState<LoanApplicationData[]>([]);
@@ -70,6 +71,7 @@ export const useLoanApplications = () => {
           action: 'updateStatus',
           rowNumber: rowIndex,
           status,
+          notes,
         }),
       });
 
