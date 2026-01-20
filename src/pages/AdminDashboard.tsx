@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { useLoanApplications } from '@/hooks/useLoanApplications';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, LogOut, RefreshCw, ShieldCheck } from 'lucide-react';
 import ApplicationCard from '@/components/admin/ApplicationCard';
 
@@ -35,9 +35,11 @@ const AdminDashboard = () => {
     return null;
   }
 
-  const pendingCount = applications.filter(a => a.status === 'pending').length;
-  const approvedCount = applications.filter(a => a.status === 'approved').length;
-  const rejectedCount = applications.filter(a => a.status === 'rejected').length;
+  // Count using exact status values from Google Sheet
+  const pendingCount = applications.filter(a => a["Status"] === 'Pending Review').length;
+  const approvedCount = applications.filter(a => a["Status"] === 'Approved').length;
+  const rejectedCount = applications.filter(a => a["Status"] === 'Rejected').length;
+  const disbursedCount = applications.filter(a => a["Status"] === 'Disbursed').length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,11 +66,11 @@ const AdminDashboard = () => {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-4 gap-3 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
-              <p className="text-xs text-muted-foreground">Pending</p>
+              <p className="text-xs text-muted-foreground">Pending Review</p>
             </CardContent>
           </Card>
           <Card>
@@ -81,6 +83,12 @@ const AdminDashboard = () => {
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
               <p className="text-xs text-muted-foreground">Rejected</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-blue-600">{disbursedCount}</p>
+              <p className="text-xs text-muted-foreground">Disbursed</p>
             </CardContent>
           </Card>
         </div>
@@ -116,9 +124,9 @@ const AdminDashboard = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {applications.map((application) => (
+            {applications.map((application, index) => (
               <ApplicationCard
-                key={application.id}
+                key={application.rowIndex || index}
                 application={application}
                 onUpdate={updateApplication}
               />
