@@ -12,3 +12,8 @@ export interface LoanApplicationData {
 }
 
 export type ApplicationStatus = 'Pending Review' | 'Approved' | 'Rejected' | 'Disbursed';
+
+export interface LoanStats {
+  totalVolume: number;
+  pendingVolume: number;
+}

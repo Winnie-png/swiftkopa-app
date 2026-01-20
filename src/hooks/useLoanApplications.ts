@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { LoanApplicationData, ApplicationStatus } from '@/types/admin';
+import { LoanApplicationData, ApplicationStatus, LoanStats } from '@/types/admin';
 import { toast } from '@/hooks/use-toast';
 
 // Google Apps Script Web App URL for Admin Dashboard
@@ -7,6 +7,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz63M9fBF-OSVr3kBReS
 
 export const useLoanApplications = () => {
   const [applications, setApplications] = useState<LoanApplicationData[]>([]);
+  const [stats, setStats] = useState<LoanStats>({ totalVolume: 0, pendingVolume: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,9 @@ export const useLoanApplications = () => {
       // Use data directly from Google Sheet without conversion
       const rawApplications = data.applications || [];
       
+      // Extract stats from response
+      const statsData: LoanStats = data.stats || { totalVolume: 0, pendingVolume: 0 };
+      
       // Sort by Timestamp (latest first)
       const sortedData = rawApplications.sort((a: LoanApplicationData, b: LoanApplicationData) => {
         const dateA = new Date(a["Timestamp"]).getTime();
@@ -40,6 +44,7 @@ export const useLoanApplications = () => {
       });
       
       setApplications(sortedData);
+      setStats(statsData);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch applications');
       toast({
@@ -113,6 +118,7 @@ export const useLoanApplications = () => {
 
   return {
     applications,
+    stats,
     loading,
     error,
     refetch: fetchApplications,
