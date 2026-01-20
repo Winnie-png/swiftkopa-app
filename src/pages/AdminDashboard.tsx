@@ -4,12 +4,17 @@ import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { useLoanApplications } from '@/hooks/useLoanApplications';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, LogOut, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Loader2, LogOut, RefreshCw, ShieldCheck, DollarSign, AlertTriangle } from 'lucide-react';
 import ApplicationCard from '@/components/admin/ApplicationCard';
+
+// Format currency as KES with commas
+const formatKES = (amount: number): string => {
+  return `KES ${amount.toLocaleString('en-KE')}`;
+};
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading, logout } = useAdminAuth();
-  const { applications, loading, error, refetch, updateApplication } = useLoanApplications();
+  const { applications, stats, loading, error, refetch, updateApplication } = useLoanApplications();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,7 +70,33 @@ const AdminDashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Stats */}
+        {/* Volume Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Loan Volume</p>
+                <p className="text-xl font-bold text-green-600">{formatKES(stats.totalVolume)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Active Risk</p>
+                <p className="text-xl font-bold text-orange-600">{formatKES(stats.pendingVolume)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Status Stats */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
