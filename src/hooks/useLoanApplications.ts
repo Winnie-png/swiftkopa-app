@@ -29,9 +29,14 @@ export const useLoanApplications = () => {
       
       const data = await response.json();
       
-      // Sort by submission date (latest first)
-      const sortedData = (data.applications || []).sort((a: LoanApplicationData, b: LoanApplicationData) => {
-        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+      // Use data directly from Google Sheet without conversion
+      const rawApplications = data.applications || [];
+      
+      // Sort by Timestamp (latest first)
+      const sortedData = rawApplications.sort((a: LoanApplicationData, b: LoanApplicationData) => {
+        const dateA = new Date(a["Timestamp"]).getTime();
+        const dateB = new Date(b["Timestamp"]).getTime();
+        return dateB - dateA;
       });
       
       setApplications(sortedData);
@@ -82,13 +87,13 @@ export const useLoanApplications = () => {
       // Update local state
       setApplications(prev =>
         prev.map(app =>
-          app.rowIndex === rowIndex ? { ...app, status, notes } : app
+          app.rowIndex === rowIndex ? { ...app, "Status": status, "Notes": notes } : app
         )
       );
 
       toast({
         title: 'Success',
-        description: `Application ${status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'updated'} successfully`,
+        description: `Application ${status} successfully`,
       });
 
       return true;
