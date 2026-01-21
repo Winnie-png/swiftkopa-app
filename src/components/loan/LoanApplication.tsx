@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ProgressBar } from './ProgressBar';
 import { LoanTypeStep } from './LoanTypeStep';
@@ -32,6 +32,8 @@ const initialState = {
   email: '',
   collateralType: null as CollateralType | null,
   assetValue: 0,
+  previousCollateral: '' as string,
+  collateralChanged: false,
 };
 
 export function LoanApplication() {
@@ -84,8 +86,29 @@ export function LoanApplication() {
   };
 
   const handleAssetValueChange = (assetValue: number) => {
-    setFormData(prev => ({ ...prev, assetValue }));
+    setFormData(prev => {
+      const collateralChanged =
+        borrowerInfo?.isRepeat &&
+        prev.previousCollateral &&
+        prev.previousCollateral !== String(assetValue);
+
+      return {
+        ...prev,
+        assetValue,
+        collateralChanged: Boolean(collateralChanged),
+      };
+    });
   };
+
+  // Store previous collateral for comparison when returning borrower
+  useEffect(() => {
+    if (borrowerInfo?.isRepeat) {
+      setFormData(prev => ({
+        ...prev,
+        previousCollateral: prev.assetValue ? String(prev.assetValue) : '',
+      }));
+    }
+  }, [borrowerInfo]);
 
   // Calculate max loan amount for secured loans
   const getMaxLoanAmount = (): number | undefined => {
@@ -141,6 +164,11 @@ export function LoanApplication() {
             collateralType: formData.collateralType,
             assetValue: formData.assetValue,
             files,
+            // Repeat borrower flags
+            borrowerId: formData.mpesaNumber,
+            isRepeat: borrowerInfo?.isRepeat ?? false,
+            docsReused: borrowerInfo?.docsReused ?? false,
+            collateralChanged: formData.collateralChanged ?? false,
           }),
         }
       );
@@ -183,6 +211,13 @@ export function LoanApplication() {
   const goNext = () => {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
+    
+    // PATCH: Skip document upload for repeat borrowers reusing documents
+    if (step === 'amount' && borrowerInfo?.isRepeat && borrowerInfo?.docsReused) {
+      setStep('mpesa');
+      return;
+    }
+    
     if (currentIndex < stepOrder.length - 1) {
       setStep(stepOrder[currentIndex + 1]);
     }
