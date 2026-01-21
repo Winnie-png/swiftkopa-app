@@ -19,6 +19,7 @@ import {
 } from '@/types/loan';
 import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
+import { useReturningBorrower } from '@/hooks/useReturningBorrower';
 
 const initialState = {
   loanType: null as LoanType | null,
@@ -35,6 +36,7 @@ const initialState = {
 
 export function LoanApplication() {
   const { toast } = useToast();
+  const { borrowerInfo, checkBorrower, saveBorrower, clearBorrower } = useReturningBorrower();
   const [step, setStep] = useState<FormStep>('type');
   const [formData, setFormData] = useState(initialState);
 
@@ -143,6 +145,14 @@ export function LoanApplication() {
         }
       );
 
+      // Save borrower info for future recognition
+      saveBorrower(
+        formData.mpesaNumber,
+        formData.fullName,
+        formData.email,
+        formData.documents.length > 0
+      );
+
       // If we get here without throwing, assume success
       setStep("success");
     } catch (error) {
@@ -159,6 +169,7 @@ export function LoanApplication() {
     formData.documents.forEach(doc => URL.revokeObjectURL(doc.preview));
     
     setFormData(initialState);
+    clearBorrower();
     setStep('type');
   };
 
@@ -283,11 +294,13 @@ export function LoanApplication() {
               fullName={formData.fullName}
               email={formData.email}
               calculation={formData.calculation}
+              returningBorrower={borrowerInfo}
               onMpesaChange={handleMpesaChange}
               onNameChange={handleNameChange}
               onEmailChange={handleEmailChange}
               onNext={goNext}
               onBack={goBack}
+              onCheckBorrower={checkBorrower}
             />
           )}
 

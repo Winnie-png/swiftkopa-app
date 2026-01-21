@@ -1,23 +1,26 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { Phone, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Mail } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Phone, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Mail, UserCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/loanCalculator';
 import { LoanCalculation } from '@/types/loan';
+import { ReturningBorrowerInfo } from '@/hooks/useReturningBorrower';
 
 interface MpesaStepProps {
   mpesaNumber: string;
   fullName: string;
   email: string;
   calculation: LoanCalculation | null;
+  returningBorrower: ReturningBorrowerInfo | null;
   onMpesaChange: (number: string) => void;
   onNameChange: (name: string) => void;
   onEmailChange: (email: string) => void;
   onNext: () => void;
   onBack: () => void;
+  onCheckBorrower: (phone: string) => ReturningBorrowerInfo | null;
 }
 
 export function MpesaStep({
@@ -25,11 +28,13 @@ export function MpesaStep({
   fullName,
   email,
   calculation,
+  returningBorrower,
   onMpesaChange,
   onNameChange,
   onEmailChange,
   onNext,
   onBack,
+  onCheckBorrower,
 }: MpesaStepProps) {
   const [touched, setTouched] = useState({ phone: false, name: false, email: false });
 
@@ -68,6 +73,17 @@ export function MpesaStep({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     onMpesaChange(formatted);
+    
+    // Check if returning borrower when phone is complete
+    if (formatted.length === 10) {
+      const existing = onCheckBorrower(formatted);
+      if (existing && existing.fullName && !fullName) {
+        onNameChange(existing.fullName);
+      }
+      if (existing && existing.email && !email) {
+        onEmailChange(existing.email);
+      }
+    }
   };
 
   const isPhoneValid = validatePhone(mpesaNumber);
@@ -86,6 +102,30 @@ export function MpesaStep({
         <h2 className="text-2xl font-bold text-foreground">M-Pesa Details</h2>
         <p className="text-muted-foreground mt-1">For loan disbursement and repayments</p>
       </div>
+
+      {/* Welcome back message for returning borrowers */}
+      {returningBorrower?.isRepeat && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-4 bg-primary/10 border border-primary/30 rounded-lg mb-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <UserCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Welcome back!</p>
+              <p className="text-sm text-muted-foreground">We found your previous details</p>
+            </div>
+          </div>
+          {returningBorrower.docsReused && (
+            <p className="text-xs text-muted-foreground mt-2 pl-13">
+              ✓ Previous documents on file
+            </p>
+          )}
+        </motion.div>
+      )}
 
       {/* M-Pesa branded section */}
       <Card className="p-5 bg-success/5 border-success/30">
