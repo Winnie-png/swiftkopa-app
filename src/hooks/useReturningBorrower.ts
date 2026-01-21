@@ -7,60 +7,62 @@ export interface ReturningBorrowerInfo {
   collateralChanged: boolean;
   fullName?: string;
   email?: string;
+  previousCollateral?: string;
 }
 
-const STORAGE_KEY = 'swiftkopa_borrower';
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbz63M9fBF-OSVr3kBReS23ygpWL7HkMF6xNuhzY18S82i6psRZ31xfIfo0j27XWVEuY/exec';
 
 export function useReturningBorrower() {
   const [borrowerInfo, setBorrowerInfo] = useState<ReturningBorrowerInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Check if borrower exists by phone number
-  const checkBorrower = useCallback((phoneNumber: string): ReturningBorrowerInfo | null => {
-    if (!phoneNumber || phoneNumber.length < 10) return null;
+  // Check if borrower exists via Google Sheets GET request
+  const checkBorrower = useCallback(async (borrowerId: string): Promise<ReturningBorrowerInfo | null> => {
+    if (!borrowerId || borrowerId.length < 10) return null;
+    
+    setIsLoading(true);
     
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) return null;
+      const url = `${ENDPOINT}?action=checkBorrower&borrowerId=${encodeURIComponent(borrowerId)}`;
+      const response = await fetch(url);
       
-      const data = JSON.parse(stored);
-      if (data.borrowerId === phoneNumber) {
+      if (!response.ok) {
+        setIsLoading(false);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.found) {
         const info: ReturningBorrowerInfo = {
-          borrowerId: data.borrowerId,
+          borrowerId,
           isRepeat: true,
-          docsReused: data.hasDocuments || false,
+          docsReused: false, // Will be set by user choice
           collateralChanged: false,
-          fullName: data.fullName,
-          email: data.email,
+          fullName: data.fullName || undefined,
+          email: data.email || undefined,
+          previousCollateral: data.collateralDescription || undefined,
         };
         setBorrowerInfo(info);
+        setIsLoading(false);
         return info;
       }
     } catch (error) {
       console.error('Error checking borrower:', error);
     }
     
+    setIsLoading(false);
     return null;
   }, []);
 
-  // Save borrower info after successful submission
-  const saveBorrower = useCallback((
-    phoneNumber: string, 
-    fullName: string, 
-    email: string,
-    hasDocuments: boolean
-  ) => {
-    try {
-      const data = {
-        borrowerId: phoneNumber,
-        fullName,
-        email,
-        hasDocuments,
-        lastSubmission: new Date().toISOString(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (error) {
-      console.error('Error saving borrower:', error);
-    }
+  // Set document reuse choice
+  const setDocsReused = useCallback((reuse: boolean) => {
+    setBorrowerInfo(prev => prev ? { ...prev, docsReused: reuse } : null);
+  }, []);
+
+  // Set collateral changed flag
+  const setCollateralChanged = useCallback((changed: boolean) => {
+    setBorrowerInfo(prev => prev ? { ...prev, collateralChanged: changed } : null);
   }, []);
 
   // Clear borrower info
@@ -70,8 +72,10 @@ export function useReturningBorrower() {
 
   return {
     borrowerInfo,
+    isLoading,
     checkBorrower,
-    saveBorrower,
+    setDocsReused,
+    setCollateralChanged,
     clearBorrower,
   };
 }

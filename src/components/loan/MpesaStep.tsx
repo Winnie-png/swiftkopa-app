@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { Phone, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Mail, UserCheck } from 'lucide-react';
+import { useState } from 'react';
+import { Phone, ArrowDownCircle, ArrowUpCircle, CheckCircle2, Mail, UserCheck, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
@@ -15,12 +15,13 @@ interface MpesaStepProps {
   email: string;
   calculation: LoanCalculation | null;
   returningBorrower: ReturningBorrowerInfo | null;
+  isCheckingBorrower: boolean;
   onMpesaChange: (number: string) => void;
   onNameChange: (name: string) => void;
   onEmailChange: (email: string) => void;
   onNext: () => void;
   onBack: () => void;
-  onCheckBorrower: (phone: string) => ReturningBorrowerInfo | null;
+  onCheckBorrower: (phone: string) => Promise<ReturningBorrowerInfo | null>;
 }
 
 export function MpesaStep({
@@ -29,6 +30,7 @@ export function MpesaStep({
   email,
   calculation,
   returningBorrower,
+  isCheckingBorrower,
   onMpesaChange,
   onNameChange,
   onEmailChange,
@@ -39,7 +41,6 @@ export function MpesaStep({
   const [touched, setTouched] = useState({ phone: false, name: false, email: false });
 
   const validatePhone = (phone: string) => {
-    // Kenyan phone format: 07XXXXXXXX or 01XXXXXXXX or +254...
     const cleaned = phone.replace(/\s/g, '');
     const pattern = /^(0[17]\d{8}|254[17]\d{8}|\+254[17]\d{8})$/;
     return pattern.test(cleaned);
@@ -56,27 +57,21 @@ export function MpesaStep({
   };
 
   const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits
     let cleaned = value.replace(/\D/g, '');
-    
-    // Handle +254 prefix
     if (cleaned.startsWith('254')) {
       cleaned = '0' + cleaned.slice(3);
     }
-    
-    // Limit to 10 digits
     cleaned = cleaned.slice(0, 10);
-    
     return cleaned;
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoneChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     onMpesaChange(formatted);
     
     // Check if returning borrower when phone is complete
     if (formatted.length === 10) {
-      const existing = onCheckBorrower(formatted);
+      const existing = await onCheckBorrower(formatted);
       if (existing && existing.fullName && !fullName) {
         onNameChange(existing.fullName);
       }
@@ -89,7 +84,7 @@ export function MpesaStep({
   const isPhoneValid = validatePhone(mpesaNumber);
   const isNameValid = validateName(fullName);
   const isEmailValid = validateEmail(email);
-  const canProceed = isPhoneValid && isNameValid && isEmailValid;
+  const canProceed = isPhoneValid && isNameValid && isEmailValid && !isCheckingBorrower;
 
   return (
     <motion.div
@@ -119,11 +114,18 @@ export function MpesaStep({
               <p className="text-sm text-muted-foreground">We found your previous details</p>
             </div>
           </div>
-          {returningBorrower.docsReused && (
-            <p className="text-xs text-muted-foreground mt-2 pl-13">
-              ✓ Previous documents on file
-            </p>
-          )}
+        </motion.div>
+      )}
+
+      {/* Loading indicator while checking borrower */}
+      {isCheckingBorrower && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center gap-2 p-3 bg-muted rounded-lg"
+        >
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Checking your details...</span>
         </motion.div>
       )}
 
