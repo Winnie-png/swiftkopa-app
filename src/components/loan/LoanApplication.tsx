@@ -5,6 +5,7 @@ import { LoanTypeStep } from './LoanTypeStep';
 import { CollateralStep, LTV_LIMITS } from './CollateralStep';
 import { LoanAmountStep } from './LoanAmountStep';
 import { DocumentUploadStep } from './DocumentUploadStep';
+import { DocumentReusePrompt } from './DocumentReusePrompt';
 import { MpesaStep } from './MpesaStep';
 import { ReviewStep } from './ReviewStep';
 import { SuccessStep } from './SuccessStep';
@@ -21,6 +22,9 @@ import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
 import { useReturningBorrower } from '@/hooks/useReturningBorrower';
 
+// Extended form step to include document choice
+type ExtendedFormStep = FormStep | 'doc-choice';
+
 const initialState = {
   loanType: null as LoanType | null,
   amount: 10000,
@@ -32,26 +36,30 @@ const initialState = {
   email: '',
   collateralType: null as CollateralType | null,
   assetValue: 0,
-  previousCollateral: '' as string,
-  collateralChanged: false,
+  collateralDescription: '',
 };
 
 export function LoanApplication() {
   const { toast } = useToast();
-  const { borrowerInfo, checkBorrower, saveBorrower, clearBorrower } = useReturningBorrower();
-  const [step, setStep] = useState<FormStep>('type');
+  const { 
+    borrowerInfo, 
+    isLoading, 
+    checkBorrower, 
+    setDocsReused, 
+    setCollateralChanged,
+    clearBorrower 
+  } = useReturningBorrower();
+  const [step, setStep] = useState<ExtendedFormStep>('type');
   const [formData, setFormData] = useState(initialState);
 
   const handleLoanTypeSelect = (type: LoanType) => {
-  setFormData(prev => ({ ...prev, loanType: type }));
-
-  // FORCE correct next step immediately
-  if (type === 'secured') {
-    setStep('collateral');
-  } else {
-    setStep('amount');
-  }
-};
+    setFormData(prev => ({ ...prev, loanType: type }));
+    if (type === 'secured') {
+      setStep('collateral');
+    } else {
+      setStep('amount');
+    }
+  };
 
   const handleAmountChange = (amount: number) => {
     setFormData(prev => ({ ...prev, amount }));
@@ -86,29 +94,20 @@ export function LoanApplication() {
   };
 
   const handleAssetValueChange = (assetValue: number) => {
-    setFormData(prev => {
-      const collateralChanged =
-        borrowerInfo?.isRepeat &&
-        prev.previousCollateral &&
-        prev.previousCollateral !== String(assetValue);
-
-      return {
-        ...prev,
-        assetValue,
-        collateralChanged: Boolean(collateralChanged),
-      };
-    });
-  };
-
-  // Store previous collateral for comparison when returning borrower
-  useEffect(() => {
-    if (borrowerInfo?.isRepeat) {
-      setFormData(prev => ({
-        ...prev,
-        previousCollateral: prev.assetValue ? String(prev.assetValue) : '',
-      }));
+    const collateralDescription = `${formData.collateralType || 'asset'}: ${assetValue}`;
+    
+    // Detect collateral change for repeat borrowers
+    if (borrowerInfo?.isRepeat && borrowerInfo.previousCollateral) {
+      const hasChanged = borrowerInfo.previousCollateral !== collateralDescription;
+      setCollateralChanged(hasChanged);
     }
-  }, [borrowerInfo]);
+    
+    setFormData(prev => ({
+      ...prev,
+      assetValue,
+      collateralDescription,
+    }));
+  };
 
   // Calculate max loan amount for secured loans
   const getMaxLoanAmount = (): number | undefined => {
@@ -124,7 +123,6 @@ export function LoanApplication() {
       reader.readAsDataURL(file);
       reader.onload = () => {
         const result = reader.result as string;
-        // Remove the data:...;base64, prefix to get raw base64
         const base64 = result.split(',')[1];
         resolve(base64);
       };
@@ -134,54 +132,61 @@ export function LoanApplication() {
 
   const handleSubmit = async () => {
     try {
-      // Convert all documents to Base64
-      const filesPromises = formData.documents.map(async (doc) => {
-        const base64 = await convertFileToBase64(doc.file);
-        return {
-          base64,
-          fileName: doc.name,
-          mimeType: doc.file.type,
-        };
-      });
+      // Only convert documents if not reusing
+      let files: { base64: string; fileName: string; mimeType: string }[] = [];
+      
+      if (!borrowerInfo?.docsReused && formData.documents.length > 0) {
+        const filesPromises = formData.documents.map(async (doc) => {
+          const base64 = await convertFileToBase64(doc.file);
+          return {
+            base64,
+            fileName: doc.name,
+            mimeType: doc.file.type,
+          };
+        });
+        files = await Promise.all(filesPromises);
+      }
 
-      const files = await Promise.all(filesPromises);
+      // Complete payload with all required fields
+      const payload = {
+        // Borrower identification
+        borrowerId: formData.mpesaNumber,
+        fullName: formData.fullName,
+        email: formData.email,
+        mpesaNumber: formData.mpesaNumber,
+        
+        // Repeat borrower flags
+        isRepeat: borrowerInfo?.isRepeat ?? false,
+        docsReused: borrowerInfo?.docsReused ?? false,
+        collateralChanged: borrowerInfo?.collateralChanged ?? false,
+        
+        // Loan details
+        loanType: formData.loanType,
+        loanAmount: formData.amount,
+        amount: formData.amount,
+        loanTerm: formData.termMonths,
+        termMonths: formData.termMonths,
+        interestRate: 20,
+        
+        // Collateral
+        collateralType: formData.collateralType,
+        collateralDescription: formData.collateralDescription,
+        assetValue: formData.assetValue,
+        
+        // Documents (empty if reused)
+        files,
+      };
 
-      // With mode: 'no-cors', we get an opaque response (status 0)
-      // We assume success if the request doesn't throw a network error
       await fetch(
         "https://script.google.com/macros/s/AKfycbxo-Dr4pesDY6kr2FhMfmAJxpWL7HkMF6xNuhzY18S82i6psRZ31xfIfo0j27XWVEuY/exec",
         {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            fullName: formData.fullName,
-            email: formData.email,
-            loanType: formData.loanType,
-            amount: formData.amount,
-            termMonths: formData.termMonths,
-            mpesaNumber: formData.mpesaNumber,
-            collateralType: formData.collateralType,
-            assetValue: formData.assetValue,
-            files,
-            // Repeat borrower flags
-            borrowerId: formData.mpesaNumber,
-            isRepeat: borrowerInfo?.isRepeat ?? false,
-            docsReused: borrowerInfo?.docsReused ?? false,
-            collateralChanged: formData.collateralChanged ?? false,
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
-      // Save borrower info for future recognition
-      saveBorrower(
-        formData.mpesaNumber,
-        formData.fullName,
-        formData.email,
-        formData.documents.length > 0
-      );
-
-      // If we get here without throwing, assume success
       setStep("success");
     } catch (error) {
       toast({
@@ -193,17 +198,33 @@ export function LoanApplication() {
   };
 
   const handleNewApplication = () => {
-    // Clean up document previews
     formData.documents.forEach(doc => URL.revokeObjectURL(doc.preview));
-    
     setFormData(initialState);
     clearBorrower();
     setStep('type');
   };
 
-  const getStepOrder = (): FormStep[] => {
+  // Handle document reuse choice
+  const handleDocReuse = (reuse: boolean) => {
+    setDocsReused(reuse);
+    if (reuse) {
+      // Skip to mpesa step
+      setStep('mpesa');
+    } else {
+      // Go to document upload
+      setStep('documents');
+    }
+  };
+
+  const getStepOrder = (): ExtendedFormStep[] => {
     if (formData.loanType === 'secured') {
+      if (borrowerInfo?.isRepeat) {
+        return ['type', 'collateral', 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'];
+      }
       return ['type', 'collateral', 'amount', 'documents', 'mpesa', 'review', 'success'];
+    }
+    if (borrowerInfo?.isRepeat) {
+      return ['type', 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'];
     }
     return ['type', 'amount', 'documents', 'mpesa', 'review', 'success'];
   };
@@ -212,9 +233,9 @@ export function LoanApplication() {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
     
-    // PATCH: Skip document upload for repeat borrowers reusing documents
-    if (step === 'amount' && borrowerInfo?.isRepeat && borrowerInfo?.docsReused) {
-      setStep('mpesa');
+    // For repeat borrowers after amount step, show doc choice
+    if (step === 'amount' && borrowerInfo?.isRepeat) {
+      setStep('doc-choice');
       return;
     }
     
@@ -226,6 +247,19 @@ export function LoanApplication() {
   const goBack = () => {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
+    
+    // Special handling for doc-choice step
+    if (step === 'doc-choice') {
+      setStep('amount');
+      return;
+    }
+    
+    // If coming back from mpesa and docs were reused, go to doc-choice
+    if (step === 'mpesa' && borrowerInfo?.docsReused) {
+      setStep('doc-choice');
+      return;
+    }
+    
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
     }
@@ -253,6 +287,9 @@ export function LoanApplication() {
     collateral: collateralInfo,
   };
 
+  // Get progress step for display (map doc-choice to documents)
+  const progressStep: FormStep = step === 'doc-choice' ? 'documents' : step as FormStep;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -269,7 +306,7 @@ export function LoanApplication() {
 
       {/* Progress */}
       <div className="container max-w-lg mx-auto px-4">
-        <ProgressBar currentStep={step} loanType={formData.loanType} />
+        <ProgressBar currentStep={progressStep} loanType={formData.loanType} />
       </div>
 
       {/* Content */}
@@ -277,10 +314,10 @@ export function LoanApplication() {
         <AnimatePresence mode="wait">
           {step === 'type' && (
             <LoanTypeStep
-  key="type"
-  selectedType={formData.loanType}
-  onSelect={handleLoanTypeSelect}
-  onNext={() => {}}
+              key="type"
+              selectedType={formData.loanType}
+              onSelect={handleLoanTypeSelect}
+              onNext={() => {}}
             />
           )}
 
@@ -311,6 +348,14 @@ export function LoanApplication() {
             />
           )}
 
+          {step === 'doc-choice' && borrowerInfo?.isRepeat && (
+            <DocumentReusePrompt
+              key="doc-choice"
+              onReuse={() => handleDocReuse(true)}
+              onUploadNew={() => handleDocReuse(false)}
+            />
+          )}
+
           {step === 'documents' && formData.loanType && (
             <DocumentUploadStep
               key="documents"
@@ -330,6 +375,7 @@ export function LoanApplication() {
               email={formData.email}
               calculation={formData.calculation}
               returningBorrower={borrowerInfo}
+              isCheckingBorrower={isLoading}
               onMpesaChange={handleMpesaChange}
               onNameChange={handleNameChange}
               onEmailChange={handleEmailChange}
