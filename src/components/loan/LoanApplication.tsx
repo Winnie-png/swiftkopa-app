@@ -387,9 +387,12 @@ export function LoanApplication() {
 
           {step === 'review' && (
             <ReviewStep
-              key="review"
               application={application}
-              borrowerInfo={borrowerInfo}
+              borrowerInfo={{
+                isRepeat: borrowerInfo?.isRepeat,
+                docsReused: borrowerInfo?.docsReused,
+                collateralChanged: borrowerInfo?.collateralChanged,
+              }}
               onSubmit={handleSubmit}
               onBack={goBack}
             />
