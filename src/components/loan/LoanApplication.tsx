@@ -1,3 +1,4 @@
+// Loan Application Component
 import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ProgressBar } from './ProgressBar';
