@@ -389,6 +389,7 @@ export function LoanApplication() {
             <ReviewStep
               key="review"
               application={application}
+              borrowerInfo={borrowerInfo}
               onSubmit={handleSubmit}
               onBack={goBack}
             />

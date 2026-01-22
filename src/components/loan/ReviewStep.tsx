@@ -12,16 +12,27 @@ import {
   AlertCircle,
   Car,
   Wrench,
-  MapPin
+  MapPin,
+  RefreshCw,
+  Files,
+  AlertTriangle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/loanCalculator';
 import { LoanApplication, CollateralType } from '@/types/loan';
 
+interface BorrowerInfo {
+  isRepeat?: boolean;
+  docsReused?: boolean;
+  collateralChanged?: boolean;
+}
+
 interface ReviewStepProps {
   application: LoanApplication;
+  borrowerInfo?: BorrowerInfo;
   onSubmit: () => Promise<void>;
   onBack: () => void;
 }
@@ -32,7 +43,7 @@ const collateralLabels: Record<CollateralType, { label: string; icon: typeof Car
   land: { label: 'Land', icon: MapPin },
 };
 
-export function ReviewStep({ application, onSubmit, onBack }: ReviewStepProps) {
+export function ReviewStep({ application, borrowerInfo, onSubmit, onBack }: ReviewStepProps) {
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -107,6 +118,30 @@ export function ReviewStep({ application, onSubmit, onBack }: ReviewStepProps) {
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground">Review Application</h2>
         <p className="text-muted-foreground mt-1">Confirm your loan details before submitting</p>
+        
+        {/* Borrower Status Badges */}
+        {(borrowerInfo?.isRepeat || borrowerInfo?.docsReused || borrowerInfo?.collateralChanged) && (
+          <div className="flex flex-wrap justify-center gap-2 mt-4">
+            {borrowerInfo?.isRepeat && (
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 gap-1.5">
+                <RefreshCw className="w-3 h-3" />
+                Returning Borrower
+              </Badge>
+            )}
+            {borrowerInfo?.docsReused && (
+              <Badge variant="secondary" className="bg-success/10 text-success border-success/20 gap-1.5">
+                <Files className="w-3 h-3" />
+                Documents Reused
+              </Badge>
+            )}
+            {borrowerInfo?.collateralChanged && (
+              <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20 gap-1.5">
+                <AlertTriangle className="w-3 h-3" />
+                Collateral Updated
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
