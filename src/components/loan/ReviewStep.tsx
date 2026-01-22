@@ -116,32 +116,34 @@ export function ReviewStep({ application, borrowerInfo, onSubmit, onBack }: Revi
       className="space-y-4"
     >
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Review Application</h2>
-        <p className="text-muted-foreground mt-1">Confirm your loan details before submitting</p>
-        
+        <h2 className="text-2xl font-bold">Review Application</h2>
+        <p className="text-muted-foreground">
+          Confirm your loan details before submitting
+        </p>
+
         {/* Borrower Status Badges */}
-        {(borrowerInfo?.isRepeat || borrowerInfo?.docsReused || borrowerInfo?.collateralChanged) && (
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {borrowerInfo?.isRepeat && (
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 gap-1.5">
-                <RefreshCw className="w-3 h-3" />
-                Returning Borrower
-              </Badge>
-            )}
-            {borrowerInfo?.docsReused && (
-              <Badge variant="secondary" className="bg-success/10 text-success border-success/20 gap-1.5">
-                <Files className="w-3 h-3" />
-                Documents Reused
-              </Badge>
-            )}
-            {borrowerInfo?.collateralChanged && (
-              <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20 gap-1.5">
-                <AlertTriangle className="w-3 h-3" />
-                Collateral Updated
-              </Badge>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2 mt-3">
+          {borrowerInfo?.isRepeat && (
+            <Badge variant="secondary">
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Returning Borrower
+            </Badge>
+          )}
+
+          {borrowerInfo?.docsReused && (
+            <Badge>
+              <Files className="w-3 h-3 mr-1" />
+              Documents Reused
+            </Badge>
+          )}
+
+          {borrowerInfo?.collateralChanged && (
+            <Badge variant="outline">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Collateral Updated
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
