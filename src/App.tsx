@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import HomePage from "./pages/HomePage";
 import Apply from "./pages/Apply";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <PWAInstallBanner />
         </AdminAuthProvider>
       </BrowserRouter>
     </TooltipProvider>
