@@ -1,6 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ProgressBar } from './ProgressBar';
+import { BorrowerIdentityStep } from './BorrowerIdentityStep';
+import { WelcomeBackBanner } from './WelcomeBackBanner';
 import { LoanTypeStep } from './LoanTypeStep';
 import { CollateralStep, LTV_LIMITS } from './CollateralStep';
 import { LoanAmountStep } from './LoanAmountStep';
@@ -9,6 +11,7 @@ import { DocumentReusePrompt } from './DocumentReusePrompt';
 import { MpesaStep } from './MpesaStep';
 import { ReviewStep } from './ReviewStep';
 import { SuccessStep } from './SuccessStep';
+import { DebugPanel } from './DebugPanel';
 import { 
   LoanType, 
   LoanCalculation, 
@@ -22,8 +25,8 @@ import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
 import { useReturningBorrower } from '@/hooks/useReturningBorrower';
 
-// Extended form step to include document choice
-type ExtendedFormStep = FormStep | 'doc-choice';
+// Extended form step to include identity and document choice
+type ExtendedFormStep = FormStep | 'identity' | 'doc-choice';
 
 const initialState = {
   loanType: null as LoanType | null,
@@ -37,6 +40,7 @@ const initialState = {
   collateralType: null as CollateralType | null,
   assetValue: 0,
   collateralDescription: '',
+  borrowerId: '',
 };
 
 export function LoanApplication() {
@@ -50,13 +54,32 @@ export function LoanApplication() {
     clearBorrower 
   } = useReturningBorrower();
 
-  const [step, setStep] = useState<ExtendedFormStep>('type');
+  const [step, setStep] = useState<ExtendedFormStep>('identity');
   const [formData, setFormData] = useState(initialState);
 
   // Safely define borrower flags
   const isRepeat = borrowerInfo?.isRepeat ?? false;
   const docsReused = borrowerInfo?.docsReused ?? false;
   const collateralChanged = borrowerInfo?.collateralChanged ?? false;
+
+  const handleBorrowerIdChange = (borrowerId: string) => {
+    setFormData(prev => ({ ...prev, borrowerId }));
+  };
+
+  const handleCheckBorrower = async (borrowerId: string) => {
+    const existing = await checkBorrower(borrowerId);
+    if (existing) {
+      // Pre-fill name and email if found
+      if (existing.fullName) {
+        setFormData(prev => ({ ...prev, fullName: existing.fullName || prev.fullName }));
+      }
+      if (existing.email) {
+        setFormData(prev => ({ ...prev, email: existing.email || prev.email }));
+      }
+      // Set mpesaNumber to borrowerId for phone-based lookups
+      setFormData(prev => ({ ...prev, mpesaNumber: borrowerId }));
+    }
+  };
 
   const handleLoanTypeSelect = (type: LoanType) => {
     setFormData(prev => ({ ...prev, loanType: type }));
@@ -142,7 +165,7 @@ export function LoanApplication() {
       }
 
       const payload = {
-        borrowerId: formData.mpesaNumber,
+        borrowerId: formData.borrowerId || formData.mpesaNumber,
         fullName: formData.fullName,
         email: formData.email,
         mpesaNumber: formData.mpesaNumber,
@@ -176,7 +199,7 @@ export function LoanApplication() {
     formData.documents.forEach(doc => URL.revokeObjectURL(doc.preview));
     setFormData(initialState);
     clearBorrower();
-    setStep('type');
+    setStep('identity');
   };
 
   const handleDocReuse = (reuse: boolean) => {
@@ -185,25 +208,61 @@ export function LoanApplication() {
   };
 
   const getStepOrder = (): ExtendedFormStep[] => {
+    const baseSteps: ExtendedFormStep[] = ['identity', 'type'];
+    
     if (formData.loanType === 'secured') {
-      return isRepeat ? ['type', 'collateral', 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'] : ['type', 'collateral', 'amount', 'documents', 'mpesa', 'review', 'success'];
+      if (isRepeat) {
+        return [...baseSteps, 'collateral', 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'];
+      }
+      return [...baseSteps, 'collateral', 'amount', 'documents', 'mpesa', 'review', 'success'];
     }
-    return isRepeat ? ['type', 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'] : ['type', 'amount', 'documents', 'mpesa', 'review', 'success'];
+    
+    if (isRepeat) {
+      return [...baseSteps, 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'];
+    }
+    return [...baseSteps, 'amount', 'documents', 'mpesa', 'review', 'success'];
   };
 
   const goNext = () => {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
-    if (step === 'amount' && isRepeat) { setStep('doc-choice'); return; }
-    if (currentIndex < stepOrder.length - 1) setStep(stepOrder[currentIndex + 1]);
+    
+    // Special handling for amount step for repeat borrowers
+    if (step === 'amount' && isRepeat) {
+      setStep('doc-choice');
+      return;
+    }
+    
+    // Skip documents step if docs are reused
+    if (step === 'doc-choice' && docsReused) {
+      setStep('mpesa');
+      return;
+    }
+    
+    if (currentIndex < stepOrder.length - 1) {
+      setStep(stepOrder[currentIndex + 1]);
+    }
   };
 
   const goBack = () => {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
-    if (step === 'doc-choice') { setStep('amount'); return; }
-    if (step === 'mpesa' && docsReused) { setStep('doc-choice'); return; }
-    if (currentIndex > 0) setStep(stepOrder[currentIndex - 1]);
+    
+    // Special handling for doc-choice
+    if (step === 'doc-choice') {
+      setStep('amount');
+      return;
+    }
+    
+    // If on mpesa and docs were reused, go back to doc-choice
+    if (step === 'mpesa' && isRepeat && docsReused) {
+      setStep('doc-choice');
+      return;
+    }
+    
+    if (currentIndex > 0) {
+      setStep(stepOrder[currentIndex - 1]);
+    }
   };
 
   const collateralInfo: CollateralInfo | undefined = 
@@ -222,10 +281,15 @@ export function LoanApplication() {
     collateral: collateralInfo,
   };
 
-  const progressStep: FormStep = step === 'doc-choice' ? 'documents' : step as FormStep;
+  // Map extended steps to base FormStep for progress bar
+  const getProgressStep = (): FormStep => {
+    if (step === 'identity') return 'type';
+    if (step === 'doc-choice') return 'documents';
+    return step as FormStep;
+  };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b">
         <div className="container max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-center gap-2">
@@ -237,12 +301,30 @@ export function LoanApplication() {
         </div>
       </header>
 
-      <div className="container max-w-lg mx-auto px-4">
-        <ProgressBar currentStep={progressStep} loanType={formData.loanType} />
-      </div>
+      {/* Welcome Back Banner for repeat borrowers */}
+      {isRepeat && step !== 'identity' && step !== 'success' && (
+        <WelcomeBackBanner borrowerId={formData.borrowerId} />
+      )}
+
+      {step !== 'identity' && step !== 'success' && (
+        <div className="container max-w-lg mx-auto px-4">
+          <ProgressBar currentStep={getProgressStep()} loanType={formData.loanType} />
+        </div>
+      )}
 
       <main className="container max-w-lg mx-auto px-4 pb-8">
         <AnimatePresence mode="wait">
+          {step === 'identity' && (
+            <BorrowerIdentityStep
+              key="identity"
+              borrowerId={formData.borrowerId}
+              isLoading={isLoading}
+              onBorrowerIdChange={handleBorrowerIdChange}
+              onCheckBorrower={handleCheckBorrower}
+              onNext={() => setStep('type')}
+            />
+          )}
+
           {step === 'type' && (
             <LoanTypeStep
               key="type"
@@ -318,6 +400,7 @@ export function LoanApplication() {
 
           {step === 'review' && (
             <ReviewStep
+              key="review"
               application={application}
               borrowerInfo={{ isRepeat, docsReused, collateralChanged }}
               onSubmit={handleSubmit}
@@ -334,6 +417,14 @@ export function LoanApplication() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Debug Panel - temporary */}
+      <DebugPanel
+        borrowerId={formData.borrowerId}
+        isRepeat={isRepeat}
+        docsReused={docsReused}
+        collateralChanged={collateralChanged}
+      />
     </div>
   );
 }
