@@ -401,17 +401,8 @@ export function LoanApplication() {
               onUploadNew={() => handleDocReuse(false)}
             />
           )}
+ 
 
-          {step === 'documents' && formData.loanType && !(isRepeat && collateralChanged && !docsReused) && (
-            <DocumentUploadStep
-              key="documents"
-              loanType={formData.loanType}
-              documents={formData.documents}
-              onDocumentsChange={handleDocumentsChange}
-              onNext={goNext}
-              onBack={goBack}
-            />
-          )}
 
           {step === 'documents-collateral-only' && formData.loanType === 'secured' && (
             <DocumentUploadCollateralOnlyStep
@@ -421,7 +412,22 @@ export function LoanApplication() {
               onNext={goNext}
               onBack={goBack}
             />
-          )}
+          )} 
+          {step === 'documents' && formData.loanType && (
+  <DocumentUploadStep
+    key="documents"
+    loanType={formData.loanType}
+    documents={formData.documents}
+    onDocumentsChange={handleDocumentsChange}
+    onNext={goNext}
+    onBack={goBack}
+    showOnlyAssetDocs={
+      borrowerInfo?.isRepeat &&
+      borrowerInfo?.collateralChanged &&
+      !borrowerInfo?.docsReused
+    }
+  />
+)}
 
           {step === 'mpesa' && (
             <MpesaStep
