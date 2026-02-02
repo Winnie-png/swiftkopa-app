@@ -5,20 +5,34 @@ interface Borrower {
   borrowerId: string;
   fullName: string;
   email: string;
-  docsReused?: boolean;
-  collateralChanged?: boolean;
+  previousCollateral?: string;
+}
+
+// Exported type for returning borrower info with flags
+export interface ReturningBorrowerInfo {
+  borrowerId: string;
+  normalizedBorrowerId: string;
+  fullName: string;
+  email: string;
+  isRepeat: boolean;
+  docsReused: boolean;
+  collateralChanged: boolean;
   previousCollateral?: string;
 }
 
 // Normalizes phone numbers: 07XXXXXXXX → 2547XXXXXXXX
-function normalizePhone(phone: string): string {
-  let digits = phone.toString().replace(/\D/g, ''); // remove non-digits
-  if (digits.startsWith('0')) digits = '254' + digits.slice(1);
+// 8-digit National IDs are preserved as-is
+export function normalizeBorrowerId(id: string): string {
+  let digits = id.toString().replace(/\D/g, ''); // remove non-digits
+  // If starts with 0 and is 10 digits (Kenyan phone), convert to international
+  if (digits.startsWith('0') && digits.length === 10) {
+    digits = '254' + digits.slice(1);
+  }
   return digits;
 }
 
 export function useReturningBorrower() {
-  const [borrowerInfo, setBorrowerInfo] = useState<Borrower | null>(null);
+  const [borrowerInfo, setBorrowerInfo] = useState<ReturningBorrowerInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Simulated fetch from Google Sheets
@@ -26,60 +40,51 @@ export function useReturningBorrower() {
     // Replace this with your real Google Script fetch
     // Example response:
     return [
-      { borrowerId: '700038822', fullName: 'Winnie Mango', email: 'winnie@example.com', previousCollateral: 'car:500000' }
+      { borrowerId: '254700038822', fullName: 'Winnie Mango', email: 'winnie@example.com', previousCollateral: 'car:500000' }
     ];
   };
 
-  const checkBorrower = async (borrowerId: string) => {
+  const checkBorrower = async (borrowerId: string): Promise<ReturningBorrowerInfo | null> => {
     setIsLoading(true);
     try {
-      const normalizedId = normalizePhone(borrowerId);
+      const normalizedId = normalizeBorrowerId(borrowerId);
       const borrowers = await fetchBorrowers();
-      const match = borrowers.find(b => normalizePhone(b.borrowerId) === normalizedId);
+      const match = borrowers.find(b => normalizeBorrowerId(b.borrowerId) === normalizedId);
 
-      const info: Borrower = match
-        ? { ...match, docsReused: false, collateralChanged: false }
-        : { borrowerId: normalizedId, fullName: '', email: '' };
+      const info: ReturningBorrowerInfo = match
+        ? {
+            borrowerId: match.borrowerId,
+            normalizedBorrowerId: normalizedId,
+            fullName: match.fullName,
+            email: match.email,
+            isRepeat: true,
+            docsReused: false,
+            collateralChanged: false,
+            previousCollateral: match.previousCollateral,
+          }
+        : {
+            borrowerId,
+            normalizedBorrowerId: normalizedId,
+            fullName: '',
+            email: '',
+            isRepeat: false,
+            docsReused: false,
+            collateralChanged: false,
+          };
 
       setBorrowerInfo(info);
 
       console.log('[ReturningBorrower] check', {
         borrowerId,
-        normalizedId,
+        normalizedBorrowerId: normalizedId,
         matchFound: !!match,
         borrowerInfo: info,
       });
 
-      return !!match;
+      return match ? info : null;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const saveBorrower = async (
-    borrowerId: string,
-    fullName: string,
-    email: string,
-    docsReused = false,
-    collateralChanged = false,
-    previousCollateral = ''
-  ) => {
-    const normalizedId = normalizePhone(borrowerId);
-
-    // Here you would push to Google Sheets via your Apps Script
-    // Example payload:
-    const payload = {
-      borrowerId: normalizedId,
-      fullName,
-      email,
-      docsReused,
-      collateralChanged,
-      previousCollateral,
-    };
-
-    console.log('[ReturningBorrower] save', payload);
-
-    setBorrowerInfo(payload);
   };
 
   const clearBorrower = () => {
@@ -98,9 +103,8 @@ export function useReturningBorrower() {
     borrowerInfo,
     isLoading,
     checkBorrower,
-    saveBorrower,
     clearBorrower,
     setDocsReused,
     setCollateralChanged,
   };
-  }
+}
