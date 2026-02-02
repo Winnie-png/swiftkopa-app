@@ -12,7 +12,7 @@ import { MpesaStep } from './MpesaStep';
 import { ReviewStep } from './ReviewStep';
 import { SuccessStep } from './SuccessStep';
 import { DebugPanel } from './DebugPanel';
-import { DocumentUploadCollateralOnlyStep } from './DocumentUploadCollateralOnlyStep';
+
 import { 
   LoanType, 
   LoanCalculation, 
@@ -26,8 +26,8 @@ import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
 import { useReturningBorrower, normalizeBorrowerId } from '@/hooks/useReturningBorrower';
 
-// Extended form step to include identity, document choice, and collateral-only docs
-type ExtendedFormStep = FormStep | 'identity' | 'doc-choice' | 'documents-collateral-only';
+// Extended form step to include identity and document choice
+type ExtendedFormStep = FormStep | 'identity' | 'doc-choice';
 
 const initialState = {
   loanType: null as LoanType | null,
@@ -242,23 +242,12 @@ export function LoanApplication() {
     // Handle doc-choice outcomes for repeat borrowers
     if (step === 'doc-choice') {
       if (docsReused) {
-        // Docs reused but collateral changed - need asset docs only
-        if (collateralChanged && formData.loanType === 'secured') {
-          setStep('documents-collateral-only');
-          return;
-        }
-        // Docs reused, no collateral change - skip to mpesa
+        // Docs reused - skip to mpesa
         setStep('mpesa');
         return;
       }
       // Not reusing docs - go to full document upload
       setStep('documents');
-      return;
-    }
-    
-    // After collateral-only docs, go to mpesa
-    if (step === 'documents-collateral-only') {
-      setStep('mpesa');
       return;
     }
     
@@ -277,18 +266,8 @@ export function LoanApplication() {
       return;
     }
     
-    // If on collateral-only docs, go back to doc-choice
-    if (step === 'documents-collateral-only') {
-      setStep('doc-choice');
-      return;
-    }
-    
-    // If on mpesa and docs were reused, go back appropriately
+    // If on mpesa and docs were reused, go back to doc-choice
     if (step === 'mpesa' && isRepeat && docsReused) {
-      if (collateralChanged && formData.loanType === 'secured') {
-        setStep('documents-collateral-only');
-        return;
-      }
       setStep('doc-choice');
       return;
     }
@@ -401,33 +380,17 @@ export function LoanApplication() {
               onUploadNew={() => handleDocReuse(false)}
             />
           )}
- 
 
-
-          {step === 'documents-collateral-only' && formData.loanType === 'secured' && (
-            <DocumentUploadCollateralOnlyStep
-              key="documents-collateral-only"
+          {step === 'documents' && formData.loanType && (
+            <DocumentUploadStep
+              key="documents"
+              loanType={formData.loanType}
               documents={formData.documents}
               onDocumentsChange={handleDocumentsChange}
               onNext={goNext}
               onBack={goBack}
             />
-          )} 
-          {step === 'documents' && formData.loanType && (
-  <DocumentUploadStep
-    key="documents"
-    loanType={formData.loanType}
-    documents={formData.documents}
-    onDocumentsChange={handleDocumentsChange}
-    onNext={goNext}
-    onBack={goBack}
-    showOnlyAssetDocs={
-      borrowerInfo?.isRepeat &&
-      borrowerInfo?.collateralChanged &&
-      !borrowerInfo?.docsReused
-    }
-  />
-)}
+          )}
 
           {step === 'mpesa' && (
             <MpesaStep
