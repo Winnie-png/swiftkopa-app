@@ -402,7 +402,7 @@ export function LoanApplication() {
             />
           )}
 
-          {step === 'documents' && formData.loanType && (
+          {step === 'documents' && formData.loanType && !(isRepeat && collateralChanged && !docsReused) && (
             <DocumentUploadStep
               key="documents"
               loanType={formData.loanType}
