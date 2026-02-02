@@ -20,14 +20,16 @@ export function DocumentUploadCollateralOnlyStep({
   const [assetDocs, setAssetDocs] = useState<DocumentFile[]>([]);
   const [assetPhotos, setAssetPhotos] = useState<DocumentFile[]>([]);
 
-  const handleFileChange = (files: FileList | null, type: 'doc' | 'photo') => {
+  const handleFileChange = (files: FileList | null, docType: 'doc' | 'photo') => {
     if (!files) return;
-    const newDocs = Array.from(files).map(file => ({
+    const fileType = docType === 'doc' ? 'asset' : 'photo';
+    const newDocs: DocumentFile[] = Array.from(files).map(file => ({
       name: file.name,
       file,
       preview: URL.createObjectURL(file),
+      type: fileType,
     }));
-    if (type === 'doc') {
+    if (docType === 'doc') {
       setAssetDocs(newDocs);
       onDocumentsChange([...assetPhotos, ...newDocs]);
     } else {
