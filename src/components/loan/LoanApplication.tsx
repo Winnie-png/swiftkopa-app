@@ -23,7 +23,7 @@ import {
 } from '@/types/loan';
 import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
-import { useReturningBorrower } from '@/hooks/useReturningBorrower';
+import { useReturningBorrower, normalizeBorrowerId } from '@/hooks/useReturningBorrower';
 
 // Extended form step to include identity and document choice
 type ExtendedFormStep = FormStep | 'identity' | 'doc-choice';
@@ -164,8 +164,11 @@ export function LoanApplication() {
         files = await Promise.all(filesPromises);
       }
 
+      // Use normalized borrowerId for consistent storage
+      const normalizedBorrowerId = normalizeBorrowerId(formData.borrowerId || formData.mpesaNumber);
+
       const payload = {
-        borrowerId: formData.borrowerId || formData.mpesaNumber,
+        borrowerId: normalizedBorrowerId,
         fullName: formData.fullName,
         email: formData.email,
         mpesaNumber: formData.mpesaNumber,
@@ -183,6 +186,8 @@ export function LoanApplication() {
         assetValue: formData.assetValue,
         files,
       };
+
+      console.log('[LoanApplication] Submitting with normalized borrowerId:', normalizedBorrowerId);
 
       await fetch(
         "https://script.google.com/macros/s/AKfycbxo-Dr4pesDY6kr2FhMfmAJxpWL7HkMF6xNuhzY18S82i6psRZ31xfIfo0j27XWVEuY/exec",
