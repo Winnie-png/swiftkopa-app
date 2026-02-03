@@ -7,7 +7,6 @@ import { LoanTypeStep } from './LoanTypeStep';
 import { CollateralStep, LTV_LIMITS } from './CollateralStep';
 import { LoanAmountStep } from './LoanAmountStep';
 import { DocumentUploadStep } from './DocumentUploadStep';
-import { DocumentReusePrompt } from './DocumentReusePrompt';
 import { MpesaStep } from './MpesaStep';
 import { ReviewStep } from './ReviewStep';
 import { SuccessStep } from './SuccessStep';
@@ -26,8 +25,8 @@ import { calculateLoan } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
 import { useReturningBorrower, normalizeBorrowerId } from '@/hooks/useReturningBorrower';
 
-// Extended form step to include identity and document choice
-type ExtendedFormStep = FormStep | 'identity' | 'doc-choice';
+// Extended form step to include identity
+type ExtendedFormStep = FormStep | 'identity';
 
 const initialState = {
   loanType: null as LoanType | null,
@@ -208,23 +207,22 @@ export function LoanApplication() {
     setStep('identity');
   };
 
-  const handleDocReuse = (reuse: boolean) => {
-    setDocsReused(reuse);
-    setStep(reuse ? 'mpesa' : 'documents');
-  };
 
   const getStepOrder = (): ExtendedFormStep[] => {
     const baseSteps: ExtendedFormStep[] = ['identity', 'type'];
     
     if (formData.loanType === 'secured') {
-      if (isRepeat) {
-        return [...baseSteps, 'collateral', 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'];
+      // Repeat borrower with same collateral: skip documents entirely
+      if (isRepeat && !collateralChanged) {
+        return [...baseSteps, 'collateral', 'amount', 'mpesa', 'review', 'success'];
       }
+      // Repeat borrower with changed collateral OR new borrower: include documents
       return [...baseSteps, 'collateral', 'amount', 'documents', 'mpesa', 'review', 'success'];
     }
     
+    // Unsecured loans for repeat borrowers: skip documents
     if (isRepeat) {
-      return [...baseSteps, 'amount', 'doc-choice', 'documents', 'mpesa', 'review', 'success'];
+      return [...baseSteps, 'amount', 'mpesa', 'review', 'success'];
     }
     return [...baseSteps, 'amount', 'documents', 'mpesa', 'review', 'success'];
   };
@@ -233,21 +231,16 @@ export function LoanApplication() {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
     
-    // Special handling for amount step for repeat borrowers
+    // Automatic document handling for repeat borrowers after amount step
     if (step === 'amount' && isRepeat) {
-      setStep('doc-choice');
-      return;
-    }
-    
-    // Handle doc-choice outcomes for repeat borrowers
-    if (step === 'doc-choice') {
-      if (docsReused) {
-        // Docs reused - skip to mpesa
+      if (collateralChanged) {
+        // Changed collateral: go to documents (asset-only mode)
+        setStep('documents');
+      } else {
+        // Same collateral: auto-reuse docs, skip to mpesa
+        setDocsReused(true);
         setStep('mpesa');
-        return;
       }
-      // Not reusing docs - go to full document upload
-      setStep('documents');
       return;
     }
     
@@ -260,15 +253,10 @@ export function LoanApplication() {
     const stepOrder = getStepOrder();
     const currentIndex = stepOrder.indexOf(step);
     
-    // Special handling for doc-choice
-    if (step === 'doc-choice') {
+    // If on mpesa and docs were auto-reused (repeat + same collateral), go back to amount
+    if (step === 'mpesa' && isRepeat && !collateralChanged) {
+      setDocsReused(false); // Reset docsReused when going back
       setStep('amount');
-      return;
-    }
-    
-    // If on mpesa and docs were reused, go back to doc-choice
-    if (step === 'mpesa' && isRepeat && docsReused) {
-      setStep('doc-choice');
       return;
     }
     
@@ -296,7 +284,6 @@ export function LoanApplication() {
   // Map extended steps to base FormStep for progress bar
   const getProgressStep = (): FormStep => {
     if (step === 'identity') return 'type';
-    if (step === 'doc-choice') return 'documents';
     return step as FormStep;
   };
 
@@ -373,14 +360,6 @@ export function LoanApplication() {
             />
           )}
 
-          {step === 'doc-choice' && isRepeat && (
-            <DocumentReusePrompt
-              key="doc-choice"
-              onReuse={() => handleDocReuse(true)}
-              onUploadNew={() => handleDocReuse(false)}
-            />
-          )}
-
           {step === 'documents' && formData.loanType && (
             <DocumentUploadStep
               key="documents"
@@ -389,6 +368,7 @@ export function LoanApplication() {
               onDocumentsChange={handleDocumentsChange}
               onNext={goNext}
               onBack={goBack}
+              assetOnlyMode={isRepeat && collateralChanged}
             />
           )}
 
