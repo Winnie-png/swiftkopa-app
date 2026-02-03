@@ -10,7 +10,7 @@ import { DocumentUploadStep } from './DocumentUploadStep';
 import { MpesaStep } from './MpesaStep';
 import { ReviewStep } from './ReviewStep';
 import { SuccessStep } from './SuccessStep';
-import { DebugPanel } from './DebugPanel';
+
 
 import { 
   LoanType, 
@@ -410,13 +410,6 @@ export function LoanApplication() {
         </AnimatePresence>
       </main>
 
-      {/* Debug Panel - temporary */}
-      <DebugPanel
-        borrowerId={formData.borrowerId}
-        isRepeat={isRepeat}
-        docsReused={docsReused}
-        collateralChanged={collateralChanged}
-      />
     </div>
   );
 }

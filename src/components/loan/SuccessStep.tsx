@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Phone, Clock, ArrowRight } from 'lucide-react';
+import { CheckCircle, Mail, Clock, ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/loanCalculator';
@@ -42,7 +42,7 @@ export function SuccessStep({ application, onNewApplication }: SuccessStepProps)
       >
         <h2 className="text-2xl font-bold text-foreground">Loan Submitted Successfully!</h2>
         <p className="text-muted-foreground mt-2">
-          Your application is being reviewed. We'll notify you via SMS.
+          Your application is being reviewed. We'll notify you via email.
         </p>
       </motion.div>
 
@@ -100,11 +100,11 @@ export function SuccessStep({ application, onNewApplication }: SuccessStepProps)
           
           <Card className="p-4 flex items-center gap-3 text-left">
             <div className="p-2 rounded-lg bg-success/10">
-              <Phone className="w-5 h-5 text-success" />
+              <Mail className="w-5 h-5 text-success" />
             </div>
             <div>
-              <p className="font-medium text-foreground text-sm">SMS Notification</p>
-              <p className="text-xs text-muted-foreground">You'll receive approval status via SMS</p>
+              <p className="font-medium text-foreground text-sm">Email Notification</p>
+              <p className="text-xs text-muted-foreground">You'll receive approval status via email</p>
             </div>
           </Card>
         </div>
